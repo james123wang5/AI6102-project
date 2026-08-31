@@ -13,11 +13,15 @@
 #SBATCH --output=slurm_optiver_cpu_f1_%j.out
 #SBATCH --error=slurm_optiver_cpu_f1_%j.err
 
-set -euo pipefail
+# Do not enable `set -u` before conda activation: the cluster's Qt activation
+# hook reads optional variables such as QT_XCB_GL_INTEGRATION.
+set -eo pipefail
 
 module load anaconda/25.5.1
 eval "$(conda shell.bash hook)"
 conda activate optiver
+
+set -u
 
 cd /home/msai/wang2496/AI6102-project
 
