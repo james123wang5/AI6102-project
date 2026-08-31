@@ -1,0 +1,7 @@
+{
+  "competition_root": "optiver-trading-at-the-close",
+  "train_csv": "optiver-trading-at-the-close/train.csv",
+  "example_test_csv": "optiver-trading-at-the-close/example_test_files/test.csv",
+  "revealed_targets_csv": "optiver-trading-at-the-close/example_test_files/revealed_targets.csv",
+  "sample_submission_csv": "optiver-trading-at-the-close/example_test_files/sample_submission.csv"
+}

@@ -1,0 +1,16 @@
+# Local environments and editor files
+.venv/
+.DS_Store
+.idea/
+.vscode/
+
+# Kaggle data and credentials must remain local
+optiver-trading-at-the-close/
+data/raw/
+.kaggle/
+kaggle.json
+
+# Generated Python files and model artifacts
+__pycache__/
+*.py[cod]
+artifacts/

@@ -1,0 +1,15 @@
+[project]
+name = "ai6102-optiver"
+version = "0.1.0"
+description = "High-frequency factor research for Optiver Trading at the Close"
+requires-python = ">=3.10"
+dependencies = [
+  "lightgbm>=4.0",
+  "numpy>=1.26",
+  "pandas>=2.1",
+  "scikit-learn>=1.4"
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

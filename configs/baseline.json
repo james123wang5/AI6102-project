@@ -1,0 +1,23 @@
+{
+  "seed": 2026,
+  "inner_early_stopping_days": 20,
+  "lightgbm": {
+    "objective": "regression_l1",
+    "metric": "mae",
+    "learning_rate": 0.05,
+    "n_estimators": 500,
+    "num_leaves": 31,
+    "min_child_samples": 100,
+    "subsample": 0.8,
+    "colsample_bytree": 0.9,
+    "reg_lambda": 1.0,
+    "early_stopping_rounds": 50,
+    "n_jobs": -1
+  },
+  "development_folds": [
+    {"name": "fold_1", "train_start": 0, "train_end": 239, "validation_start": 240, "validation_end": 289},
+    {"name": "fold_2", "train_start": 0, "train_end": 289, "validation_start": 290, "validation_end": 339},
+    {"name": "fold_3", "train_start": 0, "train_end": 339, "validation_start": 340, "validation_end": 399}
+  ],
+  "final_holdout": {"train_start": 0, "train_end": 399, "validation_start": 400, "validation_end": 480}
+}

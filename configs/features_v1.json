@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "groups": {
+    "optiver_microstructure": true,
+    "temporal": true,
+    "cross_section": true,
+    "alpha101_inspired": true
+  },
+  "exact_lag_seconds": [10, 30, 60],
+  "rolling_windows_rows": [3, 6, 12],
+  "temporal_group_keys": ["stock_id", "date_id"],
+  "cross_section_group_keys": ["date_id", "seconds_in_bucket"],
+  "missing_value_policy": "Retain NaN; create near/far missing indicators; do not globally fill values."
+}
