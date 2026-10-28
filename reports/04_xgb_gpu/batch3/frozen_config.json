@@ -1,0 +1,13 @@
+{
+  "model": "lgb",
+  "params_name": "l255",
+  "feature_set": "s_stock",
+  "recency": true,
+  "seeds": [
+    2026,
+    2027,
+    2028
+  ],
+  "mode": "index",
+  "alpha": 0.95
+}

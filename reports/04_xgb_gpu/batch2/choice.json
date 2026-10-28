@@ -1,0 +1,8 @@
+{
+  "feature_set": "s_stock",
+  "mode": "index",
+  "alpha": 0.9,
+  "pooled_dev_mae": 6.176138139224224,
+  "params_name": "l255",
+  "rule": "lowest pooled dev MAE over feature set x neutralization mode x shrink alpha"
+}

@@ -1,0 +1,2 @@
+fold,train_dates,validation_dates,training_rows,validation_rows,best_iteration,raw_lightgbm_training_seconds,peak_rss_mb,model,mae
+fold_1,0-239,240-289,2590029,547250,160,13.299169562291354,1.3766822814941406,raw_lightgbm,5.961194894462361

@@ -7,7 +7,9 @@ dependencies = [
   "lightgbm>=4.0",
   "numpy>=1.26",
   "pandas>=2.1",
-  "scikit-learn>=1.4"
+  "scikit-learn>=1.4",
+  "scipy>=1.11",
+  "xgboost>=2.1"
 ]
 
 [tool.pytest.ini_options]

@@ -1,0 +1,2 @@
+comparison,diff,ci_low,ci_high,share_negative,n_days
+holdout final - E5 V1,-0.007027081644478686,-0.011017604429060572,-0.003612908174146849,1.0,81

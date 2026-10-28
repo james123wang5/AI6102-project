@@ -14,3 +14,6 @@ kaggle.json
 __pycache__/
 *.py[cod]
 artifacts/
+
+# Row-level predictions contain competition targets; keep local
+reports/**/predictions_*.csv.gz
