@@ -2,7 +2,7 @@
 
 基于 Optiver 数据的高频因子研究与短期相对收益预测。
 
-> 当前状态（2026-10-29）：阶段 01–04（含第四批）已完成，最终 LightGBM 主线在留出集（日期 400–480）上 MAE 5.8447（全零 5.9936；第三批 5.8641）。进度、结果、复现方式与后续方向见 [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)。所有实验结果以 `reports/` 中的实际输出为准。
+> 当前状态（2026-10-29）：阶段 01–04（含第四、第五批）已完成。最终模型为 LightGBM + GRU + Transformer 融合，留出集（日期 400–480）MAE 5.8393（全零 5.9936；LightGBM 单模型 5.8447；第三批 5.8641）。第五批说明见 [docs/BATCH5_DL_REPORT.md](docs/BATCH5_DL_REPORT.md)。进度、结果、复现方式与后续方向见 [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)。所有实验结果以 `reports/` 中的实际输出为准。
 
 - GitHub 仓库：[james123wang5/AI6102-project](https://github.com/james123wang5/AI6102-project)
 - 数据来源：[Optiver — Trading at the Close](https://www.kaggle.com/competitions/optiver-trading-at-the-close)

@@ -1,0 +1,6 @@
+model,mae,vs_zero_pct,rows
+Zero,5.99363680272654,0.0,890999
+"LightGBM (batch 4 final), 3-seed avg, index, alpha=1.0",5.844739639774053,-2.484254015604559,890999
+"GRU (time axis), 3-seed avg, index, alpha=0.95",5.864824593320846,-2.149149400362338,890999
+"Transformer (stock axis), 3-seed avg, index, alpha=0.9",5.857167090361298,-2.276909943945238,890999
+"Blend (lgb 0.55, gru 0.20, tfm 0.25), index, alpha=1.05",5.839326942071697,-2.5745614179465526,890999

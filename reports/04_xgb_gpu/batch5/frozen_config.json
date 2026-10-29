@@ -1,0 +1,56 @@
+{
+  "tree": {
+    "model": "lgb",
+    "params_name": "l255",
+    "feature_set": "h_hist@num",
+    "recency": true,
+    "seeds": [
+      2026,
+      2027,
+      2028
+    ],
+    "mode": "index",
+    "alpha": 1.0
+  },
+  "dl_config": {
+    "version": "stage05_dl_v1",
+    "feature_set": "h_hist@drop",
+    "models": [
+      "gru",
+      "tfm"
+    ],
+    "seeds": [
+      2026,
+      2027,
+      2028
+    ],
+    "hidden": 128,
+    "gru_layers": 3,
+    "tfm_layers": 3,
+    "heads": 4,
+    "dropout": 0.1,
+    "lr": 0.001,
+    "weight_decay": 0.01,
+    "warmup_epochs": 1,
+    "max_epochs": 30,
+    "patience": 4,
+    "grad_clip": 1.0,
+    "days_per_batch_gru": 4,
+    "days_per_batch_tfm": 4,
+    "feature_clip": 5.0,
+    "recency": true,
+    "blend_step": 0.05
+  },
+  "blend_weights": {
+    "lgb": 0.55,
+    "gru": 0.2,
+    "tfm": 0.25
+  },
+  "blend_alpha": 1.05,
+  "solo_alpha": {
+    "lgb": 1.0,
+    "gru": 0.95,
+    "tfm": 0.9
+  },
+  "mode": "index"
+}

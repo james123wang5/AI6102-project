@@ -27,9 +27,11 @@ echo "Host: $(hostname)  Started: $(date)  CPUs: ${SLURM_CPUS_PER_TASK}"
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv
 
 # PyTorch with CUDA; installed once into the conda env if missing.
+# The node driver supports CUDA 12.8 (driver 570), so use the cu128 wheel, not the default cu13 one.
 if ! python -c "import torch, sys; sys.exit(0 if torch.cuda.is_available() else 1)" 2>/dev/null; then
     echo "Installing PyTorch (CUDA build) ..."
-    pip install --no-cache-dir torch
+    pip uninstall -y torch triton || true
+    pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cu128
 fi
 python -c "import torch; print('torch', torch.__version__, 'cuda', torch.version.cuda, torch.cuda.get_device_name(0))"
 
