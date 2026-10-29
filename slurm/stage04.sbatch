@@ -4,6 +4,7 @@
 #   sbatch slurm/stage04.sbatch 1
 #   sbatch slurm/stage04.sbatch 2
 #   sbatch slurm/stage04.sbatch 3
+#   sbatch slurm/stage04.sbatch 4   (LightGBM only; uses CPUs, the GPU stays idle)
 # Safe to resubmit: finished runs are loaded from disk instead of retrained.
 
 #SBATCH --partition=MGPU-TC2
@@ -18,7 +19,7 @@
 #SBATCH --error=slurm_stage04_%j.err
 
 set -eo pipefail
-BATCH="${1:?usage: sbatch slurm/stage04.sbatch <1|2|3>}"
+BATCH="${1:?usage: sbatch slurm/stage04.sbatch <1|2|3|4>}"
 module load anaconda/25.5.1
 eval "$(conda shell.bash hook)"
 conda activate optiver

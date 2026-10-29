@@ -1,4 +1,4 @@
-"""Shared runner for the stage-04 pipeline, batches 1-3.
+"""Shared runner for the stage-04 pipeline, batches 1-4.
 
 The main chain uses LightGBM on CPU; XGBoost on GPU is a model-family
 comparison run on the same folds, features and protocol. Every model run is
@@ -24,6 +24,7 @@ from ai6102.baselines import CSV_DTYPES, IDENTIFIER_COLUMNS, RAW_FEATURE_COLUMNS
 from ai6102.features import build_feature_frame
 from ai6102.features.market import MARKET_COLUMNS, add_market_features
 from ai6102.fold_features import INDEX_COLUMNS, STOCK_COLUMNS, add_index_features, add_stock_features, fit_stock_stats
+from ai6102.history_features import HIST_COLUMNS, INTRA_COLUMNS, add_intraday_relative_features
 from ai6102.index_model import IndexFit, fit_index_weights, neutralize
 from ai6102.validation import DateFold
 
@@ -35,7 +36,8 @@ OPTIVER_COLUMNS = [
     "near_price_is_missing", "far_price_is_missing", "liquidity_imbalance", "auction_imbalance_ratio",
     "signed_imbalance", "market_urgency",
 ]
-FEATURE_SETS = ["raw", "optiver", "temporal", "cross_section", "alpha101", "s_market", "s_index", "s_stock"]
+FEATURE_SETS = ["raw", "optiver", "temporal", "cross_section", "alpha101", "s_market", "s_index", "s_stock",
+                "h_hist", "h_intra", "h_both"]
 SET_LABELS = {
     "raw": "E1 raw fields",
     "optiver": "E2 +Optiver microstructure",
@@ -45,9 +47,16 @@ SET_LABELS = {
     "s_market": "N1 +market aggregates",
     "s_index": "N2 +synthetic-index features",
     "s_stock": "N3 +stock statistics",
+    "h_hist": "H1 +cross-day target history",
+    "h_intra": "H2 +intraday relative path",
+    "h_both": "H3 +history and intraday path",
 }
-NEEDS_INDEX = {"s_index", "s_stock"}
-NEEDS_STOCK = {"s_stock"}
+NEEDS_INDEX = {"s_index", "s_stock", "h_hist", "h_intra", "h_both"}
+NEEDS_STOCK = {"s_stock", "h_hist", "h_intra", "h_both"}
+NEEDS_INTRA = {"h_intra", "h_both"}
+# A set name may carry a stock_id treatment suffix: "h_both@num" (plain integer) or "h_both@drop" (removed);
+# no suffix keeps stock_id as a LightGBM categorical feature.
+STOCK_ID_MODES = ("cat", "num", "drop")
 
 
 def log(message: str) -> None:
@@ -200,6 +209,7 @@ def feature_set_columns(features: pd.DataFrame) -> dict[str, list[str]]:
     cross = [c for c in features.columns if c.endswith(("_cs_rank", "_cs_mean_diff", "_cs_zscore"))]
     known = set(raw) | set(OPTIVER_COLUMNS) | set(alpha) | set(cross) | set(MARKET_COLUMNS)
     known |= set(IDENTIFIER_COLUMNS) | {TARGET_COLUMN} | set(INDEX_COLUMNS) | set(STOCK_COLUMNS)
+    known |= set(HIST_COLUMNS) | set(INTRA_COLUMNS) | {"stock_id_num"}
     temporal = [c for c in features.columns if c not in known]
     sets = {"raw": raw}
     sets["optiver"] = sets["raw"] + OPTIVER_COLUMNS
@@ -209,17 +219,36 @@ def feature_set_columns(features: pd.DataFrame) -> dict[str, list[str]]:
     sets["s_market"] = sets["alpha101"] + MARKET_COLUMNS
     sets["s_index"] = sets["s_market"] + INDEX_COLUMNS
     sets["s_stock"] = sets["s_index"] + STOCK_COLUMNS
+    sets["h_hist"] = sets["s_stock"] + HIST_COLUMNS
+    sets["h_intra"] = sets["s_stock"] + INTRA_COLUMNS
+    sets["h_both"] = sets["s_stock"] + HIST_COLUMNS + INTRA_COLUMNS
     return sets
+
+
+def split_set_name(set_name: str) -> tuple[str, str]:
+    base, _, mode = set_name.partition("@")
+    mode = mode or "cat"
+    if mode not in STOCK_ID_MODES:
+        raise ValueError(f"Unknown stock_id mode in {set_name!r}")
+    return base, mode
 
 
 def fold_frames(ctx: Context, features: pd.DataFrame, fold: DateFold, set_name: str) -> tuple[pd.DataFrame, pd.DataFrame, list[str]]:
     """Train/eval frames for one fold, adding fold-fitted features if needed."""
+    base, stock_mode = split_set_name(set_name)
     scope = features.loc[features["date_id"].between(fold.train_start, fold.validation_end)]
-    if set_name in NEEDS_INDEX:
+    if base in NEEDS_INDEX:
         scope = add_index_features(scope, ctx.index_fit(features, fold.train_end).weights)
-    if set_name in NEEDS_STOCK:
+    if base in NEEDS_STOCK:
         scope = add_stock_features(scope, ctx.stock_stats(features, fold.train_end))
-    columns = feature_set_columns(features)[set_name]
+    if base in NEEDS_INTRA:
+        scope = add_intraday_relative_features(scope)
+    columns = list(feature_set_columns(features)[base])
+    if stock_mode == "num":
+        scope = scope.assign(stock_id_num=scope["stock_id"].astype("int16"))
+        columns = ["stock_id_num" if c == "stock_id" else c for c in columns]
+    elif stock_mode == "drop":
+        columns = [c for c in columns if c != "stock_id"]
     finite = np.isfinite(scope[TARGET_COLUMN].to_numpy())
     dates = scope["date_id"]
     train = scope.loc[finite & fold.train_mask(dates).to_numpy()]
@@ -331,7 +360,8 @@ def _train_lgb(ctx, fit, stop, train, evaluation, columns, params_name, seed, we
 
     def dataset(frame: pd.DataFrame, reference=None):
         return lgb.Dataset(frame[columns], label=frame[TARGET_COLUMN], weight=weights(frame),
-                           categorical_feature=["stock_id"], reference=reference, free_raw_data=True)
+                           categorical_feature=[c for c in ["stock_id"] if c in columns], reference=reference,
+                           free_raw_data=True)
 
     d_fit = dataset(fit)
     selector = lgb.train(
