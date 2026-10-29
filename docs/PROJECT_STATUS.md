@@ -1,24 +1,25 @@
 # 项目说明：当前进度、结果与后续方向
 
-更新日期：2026-10-28。本文档说明到目前为止做了什么、结果如何、怎样复现、还缺什么，以及推荐的下一步。所有数字都来自 `reports/` 下的实际输出文件，括号里给出出处。
+更新日期：2026-10-29（加入第四批）。本文档说明到目前为止做了什么、结果如何、怎样复现、还缺什么，以及推荐的下一步。所有数字都来自 `reports/` 下的实际输出文件，括号里给出出处。
 
 ## 0. 一页摘要
 
 - **任务**：Optiver "Trading at the Close"（已结束的 Kaggle 比赛）。预测每只股票未来 60 秒相对合成指数的收益（基点），指标 MAE。课程选项为"Completed Kaggle Competition"，报告 11 月 20 日交给 yuan.zhou@ntu.edu.sg。
 - **验证协议**：日期 0–399 内做三折按时间前推的开发验证（dev）；日期 400–480 作为留出集（holdout），所有选择冻结后只评估一次。这个留出区间与第 1 名公开方案的验证区间完全相同，可直接对比。
-- **主线**：LightGBM（CPU，L1 目标）+ 调参 + 累加特征组 + 由训练标签反推的合成指数权重（R² = 0.99996）+ 指数特征 + 指数加权中性化与收缩 + 近期加权 + 三种子平均。XGBoost（GPU）只作模型族对照。
+- **主线**：LightGBM（CPU，L1 目标）+ 调参 + 累加特征组 + 由训练标签反推的合成指数权重（R² = 0.99996）+ 指数特征 + 指数加权中性化与收缩 + 近期加权 + 三种子平均 + 跨天历史 target 特征 + stock_id 改为数值特征（第四批）。XGBoost（GPU）只作模型族对照。
 - **结果（holdout 400–480，全零预测 MAE 5.9936）**：
 
   | 模型 | MAE | 相对全零 |
   |---|---|---|
   | 原始 13 个字段 LightGBM | 5.9104 | −1.39% |
   | V1 全特征（阶段 03 最优） | 5.8711 | −2.04% |
-  | **最终主线** | **5.8641** | **−2.16%** |
-  | [对照] XGBoost + 同样后处理 | 5.8605 | −2.22% |
-  | [对照] LightGBM/XGBoost 50/50 | 5.8599 | −2.23% |
+  | 第三批主线 | 5.8641 | −2.16% |
+  | [对照] XGBoost + 同样后处理（第三批特征） | 5.8605 | −2.22% |
+  | [对照] LightGBM/XGBoost 50/50（第三批特征） | 5.8599 | −2.23% |
+  | **第四批主线（当前最终）** | **5.8447** | **−2.48%** |
 
-  最终主线相对 V1 的改善为 −0.0070，按天 bootstrap 95% CI [−0.0110, −0.0036]，81 天重采样中全部为负（更好）。
-- **差距**：第 1 名单个 CatBoost 在同一区间为 5.8240（−2.83%），我们落后约 0.040。
+  第三批主线相对 V1 改善 −0.0070，按天 bootstrap 95% CI [−0.0110, −0.0036]。第四批相对第三批再改善 −0.0193，95% CI [−0.0227, −0.0163]，81 天重采样全部为负。注意：第四批是 holdout 的**第二次使用**，所有选择都在 dev 上冻结后才评估，holdout 没有参与任何选择；报告中需如实说明。
+- **差距**：第 1 名单个 CatBoost 在同一区间为 5.8240（−2.83%），我们落后约 0.021（第三批时为 0.040）。
 - **主要缺口**：报告要求的排行榜截图尚未获得；Optiver 是否在课件第 5 页的候选比赛名单中尚未确认（该页为图片）。
 
 ## 1. 问题与数据
@@ -104,7 +105,27 @@ dev（pooled）：
 - 冻结配置：`{"model": "lgb", "params_name": "l255", "feature_set": "s_stock", "recency": true, "seeds": [2026, 2027, 2028], "mode": "index", "alpha": 0.95}`。
 - holdout 结果见第 0 节。dev 改善 0.0118，holdout 改善 0.0070，方向一致。
 
-运行耗时（集群，10 CPU + 1×A40）：三批共 57 次训练，训练时间合计约 3.7 小时。LightGBM 每次 1–10 分钟，XGBoost GPU 每次约 1 分钟。
+### 阶段 04 第四批：历史 target、当天相对路径、stock_id 处理（`reports/04_xgb_gpu/batch4/summary.md`）
+
+在第三批冻结配置（s_stock、近期加权、单种子 2026）上逐项加，保留规则：pooled 变好且三折中至少两折变好。
+
+| 步骤 | 特征集 | fold_1 | fold_2 | fold_3 | pooled | 变化 | 结论 |
+|---|---|---|---|---|---|---|---|
+| 参照 | s_stock | 5.92067 | 6.30457 | 6.28888 | 6.17910 | | |
+| A 跨天历史 target | h_hist | 5.91562 | 6.30253 | 6.28576 | 6.17571 | −0.00338 | 保留（3/3） |
+| B 当天相对收益滚动 | h_intra | 5.91973 | 6.30572 | 6.28917 | 6.17927 | +0.00017 | 淘汰（1/3） |
+| C stock_id 改为数值 | h_hist@num | 5.90528 | 6.29179 | 6.27368 | **6.16459** | −0.01112 | 保留（3/3，选中） |
+| C stock_id 去掉 | h_hist@drop | 5.90582 | 6.29110 | 6.27417 | 6.16473 | −0.01098 | 通过但略差 |
+
+- A：对每个 (stock_id, seconds_in_bucket) 取此前 1/3/5/10/20/40/60 天 target 的均值、20/60 天标准差、20 天 |target| 均值、5/20 天全日均值，共 12 列（`src/ai6102/history_features.py`）。第 d 天只读取 d−1 天及以前（比赛 API 次日会公布前一天 target），已用"改动当天 target 不影响当天特征"的测试验证。
+- B 无效：第二批的 `rel_return_60s` 已经包含这部分信息。
+- C 收益最大：stock_id 作为类别特征时模型在记忆个股的长期均值；改为数值或去掉后三折一致变好，两者几乎相同，说明有用的是 A 提供的近期个股信息而非编号本身。这回答了第 6 节的问题 2。
+- 三种子 + 重新选择后处理（index 中性化，α = 1.0）：dev pooled **6.15566**（−2.31%），第三批 6.17140；按天 bootstrap 差值 −0.01574，95% CI [−0.01808, −0.01343]。
+- holdout（第二次使用）：**5.84474**（−2.48%），第三批 5.86406；差值 −0.01932，95% CI [−0.02272, −0.01628]。dev 与 holdout 方向一致。
+- 冻结配置：`{"model": "lgb", "params_name": "l255", "feature_set": "h_hist@num", "recency": true, "seeds": [2026, 2027, 2028], "mode": "index", "alpha": 1.0}`。
+- 耗时：约 5.1 小时（24 次训练，特征 115 个，每次 7–30 分钟）。
+
+运行耗时（集群，10 CPU + 1×A40）：前三批共 57 次训练，训练时间合计约 3.7 小时。LightGBM 每次 1–10 分钟，XGBoost GPU 每次约 1 分钟。
 
 ## 4. 与公开方案的对比（只作参照）
 
@@ -114,7 +135,8 @@ dev（pooled）：
 | 第 1 名单个 GRU / Transformer | 400–480 | 5.9936 | 5.8481 / 5.8619 | −2.43% / −2.20% |
 | 第 1 名 CatBoost + GRU + Transformer | 400–480 | 5.9936 | 5.8117 | −3.03% |
 | 第 9 名单个 XGBoost（157 特征） | 390–480 | 6.0309 | 5.8705 | −2.66% |
-| **我们的最终主线** | 400–480 | 5.9936 | **5.8641** | **−2.16%** |
+| 我们的第三批主线 | 400–480 | 5.9936 | 5.8641 | −2.16% |
+| **我们的第四批主线** | 400–480 | 5.9936 | **5.8447** | **−2.48%** |
 
 全零 MAE 由本地 `train.csv` 计算。第 1 名私榜 5.4030，前 10 名在 5.40–5.44（私榜是比赛后的新行情，不能和本地区间直接比）。
 
@@ -133,15 +155,16 @@ src/ai6102/
   features/market.py   同一时点的全市场汇总特征（等权）
   index_model.py   由标签反推指数收益，NNLS 拟合权重；neutralize() 中性化
   fold_features.py 需要按折拟合的特征：指数相对特征、个股统计
-  stage04.py       三批共用：特征缓存、LightGBM/XGBoost 训练、运行登记 (runs.csv + 预测 pkl)、评估工具
+  history_features.py 第四批：跨天历史 target、当天相对收益滚动
+  stage04.py       四批共用：特征缓存、LightGBM/XGBoost 训练、运行登记 (runs.csv + 预测 pkl)、评估工具
 scripts/
   run_baselines.py, run_feature_experiments.py   阶段 02/03
-  run_stage04_batch{1,2,3}.py                     阶段 04 三批
+  run_stage04_batch{1,2,3,4}.py                   阶段 04 四批
 configs/
   baseline.json    数据路径、折定义
   stage04.json     阶段 04 参数网格、种子、收缩系数等
 slurm/
-  stage04.sbatch   集群作业：sbatch slurm/stage04.sbatch <1|2|3>
+  stage04.sbatch   集群作业：sbatch slurm/stage04.sbatch <1|2|3|4>
 reports/           所有实验输出（已提交）
 artifacts/         特征缓存与预测文件（不提交，见 .gitignore）
 ```
@@ -152,7 +175,7 @@ artifacts/         特征缓存与预测文件（不提交，见 .gitignore）
 module load anaconda/25.5.1 && eval "$(conda shell.bash hook)" && conda activate optiver
 pip install "xgboost>=2.1" scipy
 cd ~/AI6102-project
-sbatch slurm/stage04.sbatch 1      # 依次运行 1、2、3，每批读取上一批结果
+sbatch slurm/stage04.sbatch 1      # 依次运行 1、2、3、4，每批读取上一批结果
 tail -f slurm_stage04_<job_id>.out
 ```
 
@@ -163,7 +186,7 @@ tail -f slurm_stage04_<job_id>.out
 ## 6. 已知问题
 
 1. **集群共享盘曾写满**：第三批第一次运行因 `/home/msai`（10 TB 共享盘）满而报 `No space left on device`，重新提交后完成。后续代码建议把缓存改为 float32，并在开跑前检查剩余空间。
-2. **stock_id 增益过高**：在 s_stock 模型中，`stock_id`（作为类别特征）的 gain 约为第二名特征的 7 倍，可能在记忆个股特性，存在过拟合风险，尚未做对照实验。
+2. **stock_id 增益过高（已解决）**：在 s_stock 模型中，`stock_id`（作为类别特征）的 gain 约为第二名特征的 7 倍。第四批对照实验表明改为数值后 dev 三折一致变好，最终配置已采用数值形式。
 3. **Alpha101 组无效**：消融显示它没有带来收益，报告中应如实写出。
 4. **s_stock 与 s_index 打平**：最终配置选中 s_stock 是按事先规则，但差异在噪声内。
 5. **本地没有跑单元测试**：本地虚拟环境未安装 pytest，`tests/` 未在本轮重新运行。三批脚本都通过了本地冒烟测试，全量结果来自集群。
@@ -175,14 +198,14 @@ tail -f slurm_stage04_<job_id>.out
 | 排行榜截图 | **缺** | 课件要求"交叉验证结果和排行榜截图"。比赛是 API 代码赛，迟交需要写 Kaggle 推理 notebook。做不到的话，用"与第 1 名同区间 holdout"对比并在报告中说明 |
 | 选题是否在候选名单 | **待确认** | 课件第 5 页候选比赛列表是图片，需人工查看；不在名单内应尽快邮件问老师 |
 | 报告 | 未开始 | 建议结构见第 8.3 节 |
-| 树模型补强（第四批） | 未开始 | 见第 8.1 节 |
+| 树模型补强（第四批） | **已完成** | holdout 5.8447，见第 3 节；8.1 中第 4–6 项未做 |
 | 深度学习探索（第五批） | 未开始 | 见第 8.2 节 |
 
 ## 8. 推荐方向
 
-### 8.1 第四批：树模型补强（优先）
+### 8.1 第四批：树模型补强（第 1–3 项已完成，结果见第 3 节）
 
-目标：holdout 从 5.864 推进到 5.83–5.85。每一项都先在 dev 三折上验证，有效才保留。思路受第 9 名启发，但用我们自己的实现、按折防泄露，并逐项消融，报告中注明来源。
+目标：holdout 从 5.864 推进到 5.83–5.85（已达到 5.845）。每一项都先在 dev 三折上验证，有效才保留。思路受第 9 名启发，但用我们自己的实现、按折防泄露，并逐项消融，报告中注明来源。
 
 按预期收益排序：
 
@@ -219,3 +242,4 @@ tail -f slurm_stage04_<job_id>.out
 | `reports/04_xgb_gpu/batch1/` | baselines、tuning、ablation、index_fit、index_weights、best_params、importance |
 | `reports/04_xgb_gpu/batch2/` | feature_groups、postprocess_grid、postprocess_summary、choice |
 | `reports/04_xgb_gpu/batch3/` | dev_comparison、seeds、bootstrap、error_by_phase/liquidity/day、frozen_config、holdout、holdout_bootstrap |
+| `reports/04_xgb_gpu/batch4/` | steps（逐项保留判断）、postprocess_grid、dev_comparison、frozen_config、holdout、summary、importance |

@@ -1,0 +1,13 @@
+{
+  "model": "lgb",
+  "params_name": "l255",
+  "feature_set": "h_hist@num",
+  "recency": true,
+  "seeds": [
+    2026,
+    2027,
+    2028
+  ],
+  "mode": "index",
+  "alpha": 1.0
+}
